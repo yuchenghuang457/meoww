@@ -54,21 +54,18 @@
     .field-group { margin-bottom: 20px; }
     .field-label { display: block; font-weight: 700; color: #444; margin-bottom: 10px; font-size: 0.95rem; }
     
-    /* 切換按鈕 */
     .target-toggle { display: flex; background: #eee; border-radius: 12px; padding: 4px; }
     .toggle-option { flex: 1; text-align: center; cursor: pointer; }
     .toggle-option input { display: none; }
     .toggle-option span { display: block; padding: 8px; border-radius: 10px; transition: 0.3s; font-weight: 500; }
     .toggle-option input:checked + span { background: white; box-shadow: 0 2px 8px rgba(0,0,0,0.1); color: var(--primary-color); }
 
-    /* 輸入框 */
     .name-input, .output-input {
       width: 100%; padding: 12px 16px; border-radius: 12px; border: 2px solid #ddd;
       font-size: 1rem; transition: 0.3s; outline: none;
     }
     .name-input:focus { border-color: var(--primary-color); }
 
-    /* 顏色預設 */
     .swatches { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px; }
     .swatch {
       width: 32px; height: 32px; border-radius: 50%; cursor: pointer;
@@ -77,7 +74,6 @@
     }
     .swatch.active { transform: scale(1.2); border-color: #444; }
 
-    /* 預覽與結果 */
     .preview-box {
       background: #f9f9f9; padding: 20px; border-radius: 12px; text-align: center;
       min-height: 60px; display: flex; align-items: center; justify-content: center;
@@ -92,15 +88,35 @@
     .error-msg { color: var(--accent-color); font-size: 0.85rem; margin-bottom: 10px; font-weight: 500; }
     .info-list { padding-left: 20px; font-size: 0.9rem; line-height: 1.6; color: #555; }
     
-    .friend-card { text-align: center; }
-    .friend-code-btn {
-      display: inline-block; background: #4caf50; color: white; padding: 12px 20px;
-      border-radius: 50px; text-decoration: none; font-weight: 900; margin-top: 10px;
-    }
-    
     .hidden-color-input { position: absolute; opacity: 0; pointer-events: none; }
     .custom-row { display: flex; align-items: center; gap: 10px; cursor: pointer; margin-top: 10px;}
     .custom-swatch { width: 24px; height: 24px; border-radius: 4px; border: 1px solid #ccc; }
+
+    /* 複製成功的 Toast 樣式 */
+    #toast {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background-color: rgba(0, 0, 0, 0.85);
+      color: white;
+      padding: 12px 24px;
+      border-radius: 50px;
+      z-index: 10000;
+      font-size: 16px;
+      font-weight: bold;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.3s ease;
+      pointer-events: none;
+      white-space: nowrap;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    }
+    #toast.show {
+      opacity: 1;
+      visibility: visible;
+      transform: translate(-50%, -60%);
+    }
   </style>
 </head>
 
@@ -172,6 +188,8 @@
     </section>
   </main>
 
+  <div id="toast">✅ 已複製到剪貼簿！</div>
+
   <script>
     const presets = ['#ff0000', '#ff9800', '#ffeb3b', '#4caf50', '#2196f3', '#9c27b0', '#795548', '#000000'];
     const swatchesContainer = document.getElementById('swatches');
@@ -181,6 +199,7 @@
     const badge = document.getElementById('input-char-badge');
     const errorMsg = document.getElementById('error-msg');
     const customColorInput = document.getElementById('custom-color-input');
+    const toast = document.getElementById('toast');
     let currentColor = '#ff0000';
 
     // 初始化色盤
@@ -213,15 +232,12 @@
       const text = nameInput.value || "預覽文字";
       const isPlayer = document.querySelector('input[name="target-type"]:checked').value === 'player';
       
-      // 皮克敏 Bloom 顏色標籤格式
-      const finalCode = `<color=${currentColor}>${nameInput.value}</color>`;
-      outputInput.value = nameInput.value ? finalCode : "";
+      const finalCode = nameInput.value ? `<color=${currentColor}>${nameInput.value}</color>` : "";
+      outputInput.value = finalCode;
       
-      // 更新預覽
       previewBox.innerText = text;
       previewBox.style.color = currentColor;
 
-      // 長度與錯誤檢查
       badge.innerText = `${finalCode.length} / 30`;
       badge.style.color = finalCode.length > 30 ? 'red' : '#888';
       
@@ -232,10 +248,23 @@
     nameInput.oninput = update;
     document.querySelectorAll('input[name="target-type"]').forEach(r => r.onchange = update);
 
+    function showToast() {
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2000);
+    }
+
     document.getElementById('copy-btn').onclick = () => {
-      outputInput.select();
-      document.execCommand('copy');
-      alert('已複製到剪貼簿！');
+      if (!outputInput.value) return;
+      
+      // 優先使用新版 API
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(outputInput.value).then(showToast);
+      } else {
+        // 舊版備援
+        outputInput.select();
+        document.execCommand('copy');
+        showToast();
+      }
     };
   </script>
 </body>
